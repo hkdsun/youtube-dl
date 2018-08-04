@@ -11,7 +11,7 @@ from ..utils import (
 )
 
 
-class RadioJavanIE(InfoExtractor):
+class RadioJavanVideoIE(InfoExtractor):
     _VALID_URL = r'https?://(?:www\.)?radiojavan\.com/videos/video/(?P<id>[^/]+)/?'
     _HOST_TRACKER_URL = 'https://www.radiojavan.com/videos/video_host'
     _TEST = {
@@ -69,6 +69,75 @@ class RadioJavanIE(InfoExtractor):
             'like_count': like_count,
             'dislike_count': dislike_count,
             'formats': formats,
+        }
+
+    def _get_download_host(self, url, video_id):
+        json_payload = self._download_webpage(
+            self._HOST_TRACKER_URL,
+            video_id,
+            data=urlencode_postdata({'id': video_id}),
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': url,
+            }
+        )
+
+        return json.loads(json_payload)['host']
+
+class RadioJavanMp3IE(InfoExtractor):
+    _VALID_URL = r'https?://(?:www\.)?radiojavan\.com/mp3s/mp3/(?P<id>[^/?]+)/?'
+    _HOST_TRACKER_URL = 'https://www.radiojavan.com/mp3s/mp3_host'
+    _TEST = {
+        'url': 'https://www.radiojavan.com/mp3s/mp3/Mazyar-Fallahi-Baran-Fallahi-Begoo-Boro',
+        'md5': '9601a5a94ced3a2f772f8d18170a8920',
+        'info_dict': {
+            'id': 'Mazyar-Fallahi-Baran-Fallahi-Begoo-Boro',
+            'ext': 'mp3',
+            'title': 'Mazyar Fallahi & Baran Fallahi - Begoo Boro',
+            'thumbnail': r're:^https?://.*\.jpe?g$',
+            'upload_date': '20180729',
+            'view_count': int,
+            'like_count': int,
+            'dislike_count': int,
+        }
+    }
+
+    def _real_extract(self, url):
+        video_id = self._match_id(url)
+
+        webpage = self._download_webpage(url, video_id)
+
+        download_host = self._get_download_host(url, video_id)
+
+        mp3_path = re.findall(r"RJ\.currentMP3Url\s*=\s*'/?([^']+)'", webpage)[0]
+        url = '%s/media/%s.mp3' % (download_host, mp3_path)
+
+        title = self._og_search_title(webpage)
+        thumbnail = self._og_search_thumbnail(webpage)
+
+        upload_date = unified_strdate(self._search_regex(
+            r'class="date_added">Date added: ([^<]+)<',
+            webpage, 'upload date', fatal=False))
+
+        view_count = str_to_int(self._search_regex(
+            r'class="views">Plays: ([\d,]+)',
+            webpage, 'view count', fatal=False))
+        like_count = str_to_int(self._search_regex(
+            r'class="rating">([\d,]+) likes',
+            webpage, 'like count', fatal=False))
+        dislike_count = str_to_int(self._search_regex(
+            r'class="rating">([\d,]+) dislikes',
+            webpage, 'dislike count', fatal=False))
+
+        return {
+            'id': video_id,
+            'title': title,
+            'thumbnail': thumbnail,
+            'upload_date': upload_date,
+            'view_count': view_count,
+            'like_count': like_count,
+            'dislike_count': dislike_count,
+            'url': url,
         }
 
     def _get_download_host(self, url, video_id):
