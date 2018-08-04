@@ -190,7 +190,7 @@ Say you have some source dictionary `meta` that you've fetched as JSON with HTTP
 ```python
 meta = self._download_json(url, video_id)
 ```
-    
+
 Assume at this point `meta`'s layout is:
 
 ```python
@@ -234,7 +234,7 @@ description = self._search_regex(
 ```
 
 On failure this code will silently continue the extraction with `description` set to `None`. That is useful for metafields that may or may not be present.
- 
+
 ### Provide fallbacks
 
 When extracting metadata try to do so from multiple sources. For example if `title` is present in several places, try extracting from at least some of them. This makes it more future-proof in case some of the sources become unavailable.
@@ -260,7 +260,7 @@ This code will try to extract from `meta` first and if it fails it will try extr
 ### Make regular expressions flexible
 
 When using regular expressions try to write them fuzzy and flexible.
- 
+
 #### Example
 
 Say you need to extract `title` from the following HTML code:
@@ -284,7 +284,7 @@ title = self._search_regex(
     webpage, 'title', group='title')
 ```
 
-Note how you tolerate potential changes in the `style` attribute's value or switch from using double quotes to single for `class` attribute: 
+Note how you tolerate potential changes in the `style` attribute's value or switch from using double quotes to single for `class` attribute:
 
 The code definitely should not look like:
 
