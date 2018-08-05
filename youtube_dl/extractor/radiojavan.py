@@ -13,11 +13,11 @@ from ..utils import (
 
 class RadioJavanBaseIE(InfoExtractor):
     def _real_extract(self, url):
-        media_id = self._match_id(url)
+        entry_id = self._match_id(url)
 
-        webpage = self._download_webpage(url, media_id)
+        webpage = self._download_webpage(url, entry_id)
 
-        download_host = self._get_download_host(url, media_id)
+        download_host = self._get_download_host(url, entry_id)
 
         formats = self.get_formats(webpage, download_host)
         self._sort_formats(formats)
@@ -40,7 +40,7 @@ class RadioJavanBaseIE(InfoExtractor):
             webpage, 'dislike count', fatal=False))
 
         return {
-            'id': media_id,
+            'id': entry_id,
             'title': title,
             'thumbnail': thumbnail,
             'upload_date': upload_date,
@@ -50,11 +50,11 @@ class RadioJavanBaseIE(InfoExtractor):
             'formats': formats,
         }
 
-    def _get_download_host(self, url, media_id):
+    def _get_download_host(self, url, entry_id):
         json_payload = self._download_webpage(
             self._HOST_TRACKER_URL,
-            media_id,
-            data=urlencode_postdata({'id': media_id}),
+            entry_id,
+            data=urlencode_postdata({'id': entry_id}),
             headers={
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Referer': url,
@@ -111,3 +111,41 @@ class RadioJavanMp3IE(RadioJavanBaseIE):
     def get_formats(self, webpage, download_host):
         mp3_path = re.findall(r"RJ\.currentMP3Url\s*=\s*'/?([^']+)'", webpage)[0]
         return [{'url': '%s/media/%s.mp3' % (download_host, mp3_path)}]
+
+
+class RadioJavanPlaylistIE(RadioJavanBaseIE):
+    _VALID_URL = r'https?://(?:www\.)?radiojavan\.com/playlists/playlist/mp3/(?P<id>[^/?]+)/?'
+    _TEST = {
+        'url': 'https://www.radiojavan.com/playlists/playlist/mp3/854b87855624',
+        'info_dict': {
+            'id': '854b87855624',
+            'title': '\'Today\'s Top Hits\' MP3 Playlist',
+        },
+        'playlist_mincount': 30,
+    }
+
+    def _real_extract(self, url):
+        id = self._match_id(url)
+
+        playlist_page = self._download_webpage(url, id)
+        title = self._og_search_title(playlist_page)
+
+        player_url = "https://www.radiojavan.com/mp3s/playlist_start?id=%s" % id
+        player_page = self._download_webpage(player_url, id)
+
+        entries = self._extract_entries(player_page)
+
+        return {
+            '_type': 'playlist',
+            'entries': entries,
+            'id': id,
+            'title': title,
+        }
+
+    def _extract_entries(self, webpage):
+        entries_re = r'(?s)<li[^>]*>.*?<a[^>]+href="(/mp3s/mp3[^\"]+)"[^>]+>.*?</li>'
+        entries = re.findall(entries_re, webpage)
+        entries = sorted(set(entries), key=entries.index)
+        for idx, entry in enumerate(entries):
+            entries[idx] = self.url_result("https://www.radiojavan.com%s" % entry)
+        return entries
