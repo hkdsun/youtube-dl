@@ -113,7 +113,21 @@ class RadioJavanMp3IE(RadioJavanBaseIE):
         return [{'url': '%s/media/%s.mp3' % (download_host, mp3_path)}]
 
 
-class RadioJavanPlaylistIE(RadioJavanBaseIE):
+class RadioJavanPlaylistBaseIE(RadioJavanBaseIE):
+    def _extract_entries(self, webpage, entry_key="next"):
+        entries_json_re = r'RJ.relatedMP3\s*=\s*(.*)\s*;'
+        entries_json = json.loads(re.search(entries_json_re, webpage).group(1))
+
+        entries = []
+        for e in entries_json:
+            entry_id = e[entry_key]
+            entry = self.url_result("https://www.radiojavan.com/mp3s/mp3/%s" % entry_id)
+            entries.append(entry)
+
+        return entries
+
+
+class RadioJavanPlaylistIE(RadioJavanPlaylistBaseIE):
     _VALID_URL = r'https?://(?:www\.)?radiojavan\.com/playlists/playlist/mp3/(?P<id>[^/?]+)/?'
     _TEST = {
         'url': 'https://www.radiojavan.com/playlists/playlist/mp3/854b87855624',
@@ -142,10 +156,28 @@ class RadioJavanPlaylistIE(RadioJavanBaseIE):
             'title': title,
         }
 
-    def _extract_entries(self, webpage):
-        entries_re = r'(?s)<li[^>]*>.*?<a[^>]+href="(/mp3s/mp3[^\"]+)"[^>]+>.*?</li>'
-        entries = re.findall(entries_re, webpage)
-        entries = sorted(set(entries), key=entries.index)
-        for idx, entry in enumerate(entries):
-            entries[idx] = self.url_result("https://www.radiojavan.com%s" % entry)
-        return entries
+
+class RadioJavanAlbumIE(RadioJavanPlaylistBaseIE):
+    _VALID_URL = r'https?://(?:www\.)?radiojavan\.com/mp3s/album/(?P<id>[^/?]+)/?'
+    _TEST = {
+        'url': 'https://www.radiojavan.com/mp3s/album/TM-Bax-Selsele?index=1',
+        'info_dict': {
+            'id': 'TM-Bax-Selsele',
+            'title': 'TM Bax - Selsele',
+        },
+        'playlist_mincount': 9,
+    }
+
+    def _real_extract(self, url):
+        id = self._match_id(url)
+        player_page = self._download_webpage(url, id)
+
+        title = self._og_search_title(player_page)
+        entries = self._extract_entries(player_page, entry_key="mp3")
+
+        return {
+            '_type': 'playlist',
+            'entries': entries,
+            'id': id,
+            'title': title,
+        }

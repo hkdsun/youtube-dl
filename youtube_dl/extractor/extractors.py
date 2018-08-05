@@ -890,6 +890,7 @@ from .radiojavan import (
     RadioJavanVideoIE,
     RadioJavanMp3IE,
     RadioJavanPlaylistIE,
+    RadioJavanAlbumIE,
 )
 from .radiobremen import RadioBremenIE
 from .radiofrance import RadioFranceIE
